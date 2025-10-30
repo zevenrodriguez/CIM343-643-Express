@@ -1,11 +1,13 @@
-const express = require('express')
-const app = express()
-const port = 3000
+//This index.js is not used, use the generated app.js to add your links to routes and templates
 
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
+// const express = require('express')
+// const app = express()
+// const port = 3000
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
+// app.get('/', (req, res) => {
+//   res.send('Hello World!')
+// })
+
+// app.listen(port, () => {
+//   console.log(`Example app listening on port ${port}`)
+// })
