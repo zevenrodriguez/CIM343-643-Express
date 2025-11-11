@@ -8,28 +8,8 @@ var hbs = require('hbs');//added
 
 var app = express();
 
-// Sequelize (sqlite) - define model inline so no external models/ files are required
-const { Sequelize, DataTypes } = require('sequelize');
-const storage = require('path').join(__dirname, 'data', 'database.sqlite');
-
-const sequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage,
-  logging: false
-});
-
-// Task model
-const Task = sequelize.define('Task', {
-  name: { type: DataTypes.STRING, allowNull: false },
-  description: { type: DataTypes.TEXT }
-});
-
-// ensure database tables exist; don't block export - log result
-sequelize.sync().then(() => {
-  console.log('Database synced');
-}).catch(err => {
-  console.error('Unable to sync database:', err);
-});
+const { Sequelize } = require('sequelize');
+const { DataTypes } = require('sequelize');
 
 // view engine setup
 
@@ -56,6 +36,38 @@ app.use(express.static(path.join(__dirname, 'public')));
 hbs.registerPartials(path.join(__dirname, 'views', 'partials'))
 hbs.registerPartial('partial_name', 'partial value');
 
+const storage = path.join(__dirname, '..', 'data', 'database.sqlite');
+
+const sequelize = new Sequelize({
+  dialect: 'sqlite',
+  storage,
+  logging: false
+});
+
+
+const Task = sequelize.define('Task', {
+    name: { type: DataTypes.STRING, allowNull: false },
+    description: { type: DataTypes.TEXT }
+  });
+
+// Define Poll model (kept inline for simplicity)
+const Poll = sequelize.define('Poll', {
+  color: { type: DataTypes.STRING, allowNull: false },
+  amount: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 }
+});
+
+// Ensure database tables exist
+sequelize.sync().then(() => {
+  console.log('Database synced');
+}).catch(err => {
+  console.error('Unable to sync database:', err);
+});
+
+// Register an equality helper so templates can do: {{#if (eq v1 v2)}}
+hbs.registerHelper('eq', function (a, b) {
+  return a === b;
+});
+
 /* GET home page. */
 app.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' });
@@ -74,9 +86,8 @@ app.get('/parameters/:name', function(req, res) {
 res.render('index', { title: req.params.name });
 });
 
-/* GET add task form */
-app.get('/addtask', function(req, res, next) {
-  res.render('addtask', { title: 'Add Task' });
+app.get('/form', function(req, res) {
+  res.render('form', { title: 'The Form' });
 });
 
 /* POST create task */
@@ -126,7 +137,42 @@ app.post('/tasks/:id/delete', async function(req, res, next) {
 });
 
 
+
+
 // catch 404 and forward to error handler
+/* GET charts page */
+app.get('/charts', function(req, res, next) {
+  res.render('charts', { title: 'Charts' });
+});
+
+/* GET single-chart route */
+app.get('/chart', function(req, res, next) {
+  res.render('charts', { title: 'Chart' });
+});
+
+/* POST chart form handler: increment existing color entry or create it, then redirect to /chart */
+app.post('/chart', async function(req, res, next) {
+  try {
+    const color = req.body.color;
+    if (!color) return res.redirect('/chart');
+    // Find existing entry for this color
+    const existing = await Poll.findOne({ where: { color } });
+    if (existing) {
+      // increment and save
+      existing.amount = (existing.amount || 0) + 1;
+      await existing.save();
+    } else {
+      // create new entry with amount 1
+      await Poll.create({ color, amount: 1 });
+    }
+
+    // redirect back to the chart page
+    res.redirect('/chart');
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.use(function(req, res, next) {
   next(createError(404));
 });
