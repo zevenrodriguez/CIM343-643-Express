@@ -8,7 +8,13 @@
  
   <button type="submit">Submit</button>
 </form>
-
+<div>
+  
+  {{#each poll}}
+    <p>{{this.color}}: {{this.amount}}</p>
+  {{/each}} 
+  
+  </div>
 <div>
   <canvas id="barChart"></canvas>
 </div>
@@ -16,15 +22,26 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-  const ctx = document.getElementById('barChart');
+ 
+  var pollData = {{{ pollJSON }}};
+  console.log(pollData);
+  let colors = [];
+  let amounts = [];
+  for (let i = 0; i < pollData.length; i++) {
+    colors.push(pollData[i].color);
+    amounts.push(pollData[i].amount);
+  }
+  console.log(colors);
+  console.log(amounts);
 
+const ctx = document.getElementById('barChart');
   new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+      labels: colors,
       datasets: [{
         label: '# of Votes',
-        data: [12, 19, 3, 5, 2, 3],
+        data: amounts,
         borderWidth: 1
       }]
     },

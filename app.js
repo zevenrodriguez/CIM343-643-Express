@@ -46,9 +46,9 @@ const sequelize = new Sequelize({
 
 
 const Task = sequelize.define('Task', {
-    name: { type: DataTypes.STRING, allowNull: false },
-    description: { type: DataTypes.TEXT }
-  });
+  name: { type: DataTypes.STRING, allowNull: false },
+  description: { type: DataTypes.TEXT }
+});
 
 // Define Poll model (kept inline for simplicity)
 const Poll = sequelize.define('Poll', {
@@ -69,29 +69,29 @@ hbs.registerHelper('eq', function (a, b) {
 });
 
 /* GET home page. */
-app.get('/', function(req, res, next) {
+app.get('/', function (req, res, next) {
   res.render('index', { title: 'Express' });
 });
 
 /* GET page2 */
-app.get('/page2', function(req, res, next) {
+app.get('/page2', function (req, res, next) {
   res.render('page2', { title: 'Page2' });
 });
 
 /* GET home page. */
-app.get('/parameters/:name', function(req, res) {
+app.get('/parameters/:name', function (req, res) {
   //res.render('page2', { title: 'Page2' });
   // access the route parameter named `name` via `req.params.name`
- // res.send('user ' + req.params.name);
-res.render('index', { title: req.params.name });
+  // res.send('user ' + req.params.name);
+  res.render('index', { title: req.params.name });
 });
 
-app.get('/form', function(req, res) {
+app.get('/form', function (req, res) {
   res.render('form', { title: 'The Form' });
 });
 
 /* POST create task */
-app.post('/addtask', async function(req, res, next) {
+app.post('/addtask', async function (req, res, next) {
   try {
     const created = await Task.create({ name: req.body.name, description: req.body.description });
     // render a clearer confirmation page for the saved task
@@ -104,7 +104,7 @@ app.post('/addtask', async function(req, res, next) {
 
 
 /* GET tasks list (JSON) */
-app.get('/tasks', async function(req, res, next) {
+app.get('/tasks', async function (req, res, next) {
   try {
     const tasks = await Task.findAll({ order: [['createdAt', 'DESC']] });
     res.json(tasks);
@@ -114,7 +114,7 @@ app.get('/tasks', async function(req, res, next) {
 });
 
 /* GET tasks page (HTML) */
-app.get('/taskspage', async function(req, res, next) {
+app.get('/taskspage', async function (req, res, next) {
   try {
     const tasks = await Task.findAll({ order: [['createdAt', 'DESC']] });
     // render an HTML page with the tasks
@@ -125,7 +125,7 @@ app.get('/taskspage', async function(req, res, next) {
 });
 
 /* POST delete a task */
-app.post('/tasks/:id/delete', async function(req, res, next) {
+app.post('/tasks/:id/delete', async function (req, res, next) {
   try {
     const id = req.params.id;
     await Task.destroy({ where: { id } });
@@ -137,21 +137,22 @@ app.post('/tasks/:id/delete', async function(req, res, next) {
 });
 
 
-
-
-// catch 404 and forward to error handler
-/* GET charts page */
-app.get('/charts', function(req, res, next) {
-  res.render('charts', { title: 'Charts' });
-});
-
 /* GET single-chart route */
-app.get('/chart', function(req, res, next) {
-  res.render('charts', { title: 'Chart' });
+app.get('/chart', async function (req, res, next) {
+  //res.render('charts', { title: 'Chart' });
+  try {
+    const poll = await Poll.findAll({ order: [['createdAt', 'DESC']] });
+
+
+    // render an HTML page with the tasks
+    res.render('charts', { title: 'Chart', poll, pollJSON: JSON.stringify(poll) });
+  } catch (err) {
+    next(err);
+  }
 });
 
 /* POST chart form handler: increment existing color entry or create it, then redirect to /chart */
-app.post('/chart', async function(req, res, next) {
+app.post('/chart', async function (req, res, next) {
   try {
     const color = req.body.color;
     if (!color) return res.redirect('/chart');
@@ -159,13 +160,19 @@ app.post('/chart', async function(req, res, next) {
     const existing = await Poll.findOne({ where: { color } });
     if (existing) {
       // increment and save
-      existing.amount = (existing.amount || 0) + 1;
+      //existing.amount = (existing.amount || 0) + 1;
+      if (existing.amount) {
+        // If 'existing.amount' exists and is not 0 (it's "truthy")
+        existing.amount = existing.amount + 1;
+      } else {
+        // If 'existing.amount' is missing (undefined) or 0 (it's "falsy")
+        existing.amount = 1;
+      }
       await existing.save();
     } else {
       // create new entry with amount 1
       await Poll.create({ color, amount: 1 });
     }
-
     // redirect back to the chart page
     res.redirect('/chart');
   } catch (err) {
@@ -173,12 +180,12 @@ app.post('/chart', async function(req, res, next) {
   }
 });
 
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   next(createError(404));
 });
 
 // error handler
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
