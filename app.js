@@ -90,6 +90,10 @@ app.get('/form', function (req, res) {
   res.render('form', { title: 'The Form' });
 });
 
+app.get('/addtask', function (req, res) {
+  res.render('addtask', { title: 'The Form' });
+});
+
 /* POST create task */
 app.post('/addtask', async function (req, res, next) {
   try {
@@ -178,6 +182,10 @@ app.post('/chart', async function (req, res, next) {
   } catch (err) {
     next(err);
   }
+});
+
+app.get('/p5', function (req, res) {
+  res.render('p5js', { title: 'The Form' });
 });
 
 app.use(function (req, res, next) {
