@@ -184,8 +184,17 @@ app.post('/chart', async function (req, res, next) {
   }
 });
 
-app.get('/p5', function (req, res) {
-  res.render('p5js', { title: 'The Form' });
+app.get('/p5', async function (req, res, next) {
+  //res.render('p5js', { title: 'p5js' });
+  try {
+    const poll = await Poll.findAll({ order: [['createdAt', 'DESC']] });
+
+
+    // render an HTML page with the tasks
+    res.render('p5js', { title: 'p5js', pollJSON: JSON.stringify(poll) });
+  } catch (err) {
+    next(err);
+  }
 });
 
 app.use(function (req, res, next) {
