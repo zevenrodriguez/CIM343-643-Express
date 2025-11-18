@@ -7,6 +7,8 @@ var logger = require('morgan');
 var hbs = require('hbs');//added
 
 var app = express();
+const fs = require('fs');
+
 
 const { Sequelize } = require('sequelize');
 const { DataTypes } = require('sequelize');
@@ -22,6 +24,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 //Setting up your routes
 //var indexRouter = require('./routes/index');
@@ -44,11 +49,22 @@ const sequelize = new Sequelize({
   logging: false
 });
 
+const List = sequelize.define('List', {
+  name: { type: DataTypes.STRING, allowNull: false },
+});
 
 const Task = sequelize.define('Task', {
   name: { type: DataTypes.STRING, allowNull: false },
   description: { type: DataTypes.TEXT }
 });
+
+// 1. A List can contain multiple Tasks
+List.hasMany(Task, {
+  onDelete: 'CASCADE'   // If a List is deleted, delete its Tasks
+});
+
+// 2. A Task belongs to a single List
+Task.belongsTo(List);
 
 // Define Poll model (kept inline for simplicity)
 const Poll = sequelize.define('Poll', {
@@ -56,12 +72,29 @@ const Poll = sequelize.define('Poll', {
   amount: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 }
 });
 
-// Ensure database tables exist
+// old version - Ensure database tables exist
+/*
 sequelize.sync().then(() => {
   console.log('Database synced');
 }).catch(err => {
   console.error('Unable to sync database:', err);
 });
+*/
+
+
+async function syncDatabase() {
+  try {
+    // 'alter: true' checks the current tables and adds missing columns
+    // without deleting existing data.
+    await sequelize.sync({ alter: true });
+    console.log("✅ Database synchronized! Missing columns have been added.");
+  } catch (error) {
+    console.error("❌ Sync failed:", error);
+  }
+}
+
+syncDatabase();
+
 
 // Register an equality helper so templates can do: {{#if (eq v1 v2)}}
 hbs.registerHelper('eq', function (a, b) {
@@ -195,6 +228,72 @@ app.get('/p5', async function (req, res, next) {
   } catch (err) {
     next(err);
   }
+});
+
+app.get('/addlist', function (req, res, next) {
+  res.render('addlist', { title: 'Add List' });
+});
+
+
+
+app.post('/addlist', async function (req, res, next) {
+  console.log('Received addlist POST:', req.body);
+  try {
+        // req.body is now the clean JSON object
+        const list = await List.create(req.body, {
+            include: [Task]
+        });
+        res.json(list);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/lists', async (req, res) => {
+  try {
+    // 1. Fetch Lists AND their associated Tasks
+    const listsFromDB = await List.findAll({
+      include: [Task], // This performs the SQL JOIN
+      order: [['createdAt', 'DESC']] // Optional: Show newest lists first
+    });
+
+    // 2. Convert Sequelize Instances to Plain JSON
+    // Handlebars often blocks access to complex prototype objects for security.
+    // .map(l => l.get({ plain: true })) fixes this.
+    const plainLists = listsFromDB.map(list => list.get({ plain: true }));
+
+    // 3. Render the view and pass the data
+    res.render('viewlists', { 
+      lists: plainLists,
+      pageTitle: 'All Lists' 
+    });
+
+  } catch (error) {
+    console.error('Error fetching lists:', error);
+    res.status(500).send('Error loading lists');
+  }
+});
+
+app.get('/delete-all', async (req, res) => {
+    try {
+        // Deleting all Lists will automatically delete all Tasks 
+        // because of the "onDelete: 'CASCADE'" setting in your association.
+        await List.destroy({
+            where: {}, // Empty object means "match everything"
+            truncate: false // Set to true if you want to reset IDs to 1 (depends on DB support)
+        });
+
+        await Task.destroy({
+            where: {}, // Empty object means "match everything"
+            truncate: false // Set to true if you want to reset IDs to 1 (depends on DB support)
+        });
+
+        res.status(200).json({ message: 'All lists and tasks have been deleted.' });
+    } catch (error) {
+        console.error('Error clearing database:', error);
+        res.status(500).json({ error: 'Failed to clear database' });
+    }
 });
 
 app.use(function (req, res, next) {

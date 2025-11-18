@@ -1,0 +1,39 @@
+<h1>My To-Do Lists</h1>
+    <a href="/addlist">Create New List</a>
+    <hr>
+
+    {{#if lists.length}}
+        
+        {{#each lists}}
+            <div class="list-container">
+                <div class="list-header">
+                    <div>
+                        <h2 style="margin:0">{{this.name}}</h2>
+                        <small>{{this.description}}</small>
+                    </div>
+                    <small>Created: {{this.createdAt}}</small>
+                </div>
+
+                <h3>Tasks:</h3>
+                
+                {{#if this.Tasks.length}}
+                    <ul class="task-ul">
+                        <!-- Nested Loop for Tasks -->
+                        {{#each this.Tasks}}
+                            <li class="task-li">
+                                <strong>{{this.name}}</strong>
+                                {{#if this.description}}
+                                    - {{this.description}}
+                                {{/if}}
+                            </li>
+                        {{/each}}
+                    </ul>
+                {{else}}
+                    <p class="empty-msg">No tasks in this list.</p>
+                {{/if}}
+            </div>
+        {{/each}}
+
+    {{else}}
+        <p>No lists found. Go create one!</p>
+    {{/if}}
